@@ -75,6 +75,20 @@ h1 .sub{color:var(--gold)}
 select.sel{background:var(--panel);border:1px solid var(--line2);border-radius:10px;color:var(--ink);font-family:var(--mono);font-size:12.5px;padding:9px 12px;cursor:pointer;outline:none}
 #char{max-width:190px}
 .owntoggle{display:inline-flex;align-items:center;gap:7px}
+.clearown{display:inline-flex;align-items:center;gap:6px}
+.clearown .brm{width:17px;height:17px}
+.clearown.armed{background:var(--red);border-color:var(--red);color:var(--on)}
+.confirm-overlay{position:fixed;inset:0;z-index:100;background:rgba(10,6,14,.7);backdrop-filter:blur(3px);display:none;align-items:center;justify-content:center;padding:20px}
+.confirm-overlay.open{display:flex}
+.confirm-box{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px 24px 18px;max-width:320px;width:100%;box-shadow:0 24px 60px -20px rgba(0,0,0,.7);text-align:center}
+.confirm-msg{font-family:var(--disp,'Cormorant Garamond',serif);font-size:19px;color:var(--ink);line-height:1.3}
+.confirm-sub{font-family:var(--mono);font-size:11.5px;color:var(--mut2);margin-top:8px;letter-spacing:.03em}
+.confirm-actions{display:flex;gap:10px;margin-top:20px}
+.cbtn{flex:1;font-family:var(--mono);font-size:12.5px;letter-spacing:.05em;padding:10px;border-radius:10px;cursor:pointer;border:1px solid var(--line2);transition:.15s;text-transform:uppercase}
+.cbtn.cancel{background:transparent;color:var(--mut)}
+.cbtn.cancel:hover{color:var(--ink);border-color:var(--line)}
+.cbtn.ok{background:var(--red);border-color:var(--red);color:var(--on);font-weight:700}
+.cbtn.ok:hover{filter:brightness(1.08)}
 .owntoggle .dia{width:18px;height:18px}
 .owntoggle .dia path{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
 .owntoggle.on .dia path{fill:currentColor}
@@ -278,6 +292,7 @@ footer a{color:var(--gold)}
     <span style="font-family:var(--mono);font-size:11px;color:var(--mut2);letter-spacing:.1em">SORT</span>
     <div class="seg sort" id="sortSeg"></div>
     <button class="ghost owntoggle" id="ownToggle" style="margin-left:auto" title="Show owned cards only"><svg class="dia" viewBox="0 0 24 24"><path d="M12 2 22 12 12 22 2 12Z"/></svg><span id="ownlbl">Off</span></button>
+    <button class="ghost clearown" id="clearOwn" title="Clear all owned"><svg class="brm" viewBox="0 0 24 24" fill="currentColor"><g transform="rotate(-40 12 12)"><rect x="10.9" y="2" width="2.2" height="9.5" rx="1"/><rect x="7.7" y="11.3" width="8.6" height="2" rx="0.6"/><path d="M8 13.3h8l1.4 7.7-2-1.6-1.5 1.6-1.5-1.6-1.4 1.6-1.5-1.6-1.5 1.6-2-1.6z"/></g></svg><span class="clbl">Clear</span></button>
   </div>
  </div>
 </div>
@@ -300,6 +315,16 @@ footer a{color:var(--gold)}
 </footer>
 
 <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-msg" id="confirmMsg">Clear all owned marks?</div>
+    <div class="confirm-sub">This can't be undone.</div>
+    <div class="confirm-actions">
+      <button class="cbtn cancel" id="confirmCancel">Cancel</button>
+      <button class="cbtn ok" id="confirmOk">OK</button>
+    </div>
+  </div>
+</div>
 
 <script>
 const SKILLS = {"active":{"Charge Boost":{"tu":200,"mp":-1,"dmg":0.0,"target":0,"desc":"The user becomes Charged, and increases P ATK. User must not be Charged to activate."},"Charge Up":{"tu":150,"mp":-1,"dmg":0.0,"target":0,"desc":"The user becomes Charged. User must not be Charged to activate."},"Fire Curse":{"tu":150,"mp":-2,"dmg":0.0,"target":0,"desc":"Curse all Fire element enemies."},"Water Curse":{"tu":150,"mp":-2,"dmg":0.0,"target":0,"desc":"Curse all Water element enemies."},"Full DEF Boost":{"tu":100,"mp":1,"dmg":0.0,"target":0,"desc":"Increases own S DEF and P DEF."},"Guard Allies (A)":{"tu":200,"mp":-3,"dmg":0.0,"target":0,"desc":"The user Guards allies until defeated."},"Guard Allies (B)":{"tu":300,"mp":-2,"dmg":0.0,"target":0,"desc":"The user Guards allies until defeated."},"Life Flip (A)":{"tu":130,"mp":-2,"dmg":0.0,"target":0,"desc":"Exchanges the user's current HP with the amount of HP they have currently lost. Usable once per battle."},"Life Flip (B)":{"tu":180,"mp":-1,"dmg":0.0,"target":0,"desc":"Exchanges the user's current HP with the amount of HP they have currently lost. Usable once per battle."},"P ATK Boost":{"tu":100,"mp":1,"dmg":0.0,"target":0,"desc":"Increases own P ATK."},"Quicken":{"tu":100,"mp":-1,"dmg":0.0,"target":0,"desc":"Reduces the user's Active Skill TU costs by 20%."},"S ATK Boost":{"tu":100,"mp":1,"dmg":0.0,"target":0,"desc":"Increases own S ATK."},"Unleash Fury":{"tu":100,"mp":0,"dmg":0.0,"target":0,"desc":"The user gains Fury."},"Attack (A)":{"tu":150,"mp":3,"dmg":1.0,"target":1,"desc":"1x damage to 1 enemy."},"Attack (B)":{"tu":130,"mp":2,"dmg":1.0,"target":1,"desc":"1x damage to 1 enemy."},"Blood Frenzy":{"tu":150,"mp":-2,"dmg":5.0,"target":1,"desc":"5x damage to 1 enemy. User must have killed twice to activate."},"Charged Strike":{"tu":150,"mp":-1,"dmg":5.0,"target":1,"desc":"Consumes own Charge for 5x damage to 1 enemy. User must be Charged to activate."},"Curse Assault (A)":{"tu":200,"mp":-2,"dmg":4.0,"target":1,"desc":"4x damage to a Cursed enemy."},"Curse Assault (B)":{"tu":400,"mp":-2,"dmg":6.0,"target":1,"desc":"6x damage to a Cursed enemy."},"Curse Attack":{"tu":130,"mp":-1,"dmg":0.75,"target":1,"desc":"0.75x damage to 1 enemy and Curses them."},"Desperate Strike":{"tu":150,"mp":-1,"dmg":5.0,"target":1,"desc":"5x damage to 1 enemy. User must have below 50% HP to activate."},"Dream Hunt":{"tu":300,"mp":-2,"dmg":6.0,"target":1,"desc":"6x damage to a Sleeping enemy."},"Final Stand":{"tu":150,"mp":-2,"dmg":5.0,"target":1,"desc":"5x damage to 1 enemy. User must have no allies to activate."},"Furious Strike (A)":{"tu":200,"mp":-2,"dmg":4.0,"target":1,"desc":"4x damage to 1 enemy. User must have Fury to activate."},"Furious Strike (B)":{"tu":130,"mp":-1,"dmg":2.0,"target":1,"desc":"2x damage to 1 enemy. User must have Fury to activate."},"Power Attack":{"tu":250,"mp":-2,"dmg":2.5,"target":1,"desc":"2.5x damage to 1 enemy."},"Reckless Attack":{"tu":130,"mp":2,"dmg":1.25,"target":1,"desc":"1.25x damage to 1 enemy, user suffers recoil damage."},"Reckless Power Attack":{"tu":230,"mp":-1,"dmg":3.0,"target":1,"desc":"3x damage to 1 enemy, user suffers recoil damage."},"Survivor's Burst":{"tu":200,"mp":-2,"dmg":5.0,"target":1,"desc":"5x damage to 1 enemy. User must survive for 300TU to activate."},"Time Strike":{"tu":250,"mp":-1,"dmg":4.0,"target":1,"desc":"At least 2x damage to 1 enemy. This damage is relative to their current TU, up to 6x."},"Vengeance Strike":{"tu":180,"mp":-2,"dmg":3.0,"target":1,"desc":"3x damage to 1 enemy that has killed."},"Zealous Strike":{"tu":180,"mp":-1,"dmg":2.5,"target":1,"desc":"2.5x damage to 1 enemy. User must have above 75% HP to activate."},"Attack Two (A)":{"tu":200,"mp":4,"dmg":0.75,"target":2,"desc":"0.75x damage to 2 enemies."},"Attack Two (B)":{"tu":180,"mp":3,"dmg":0.75,"target":2,"desc":"0.75x damage to 2 enemies."},"Blood Frenzy Two":{"tu":200,"mp":-3,"dmg":4.0,"target":2,"desc":"4x damage to 2 enemies. User must have killed twice to activate."},"Charged Strike Two":{"tu":250,"mp":-2,"dmg":4.0,"target":2,"desc":"Consumes own Charge for 4x damage to 2 enemies. User must be Charged to activate."},"Curse Assault Two":{"tu":250,"mp":-2,"dmg":3.0,"target":2,"desc":"Attacks 2 enemies. 3x damage to Cursed enemies."},"Curse Attack Two":{"tu":150,"mp":-2,"dmg":0.5,"target":2,"desc":"0.5x damage to 2 enemies and Curses them."},"Desperate Strike Two":{"tu":200,"mp":-2,"dmg":4.0,"target":2,"desc":"4x damage to 2 enemies. User must have below 50% HP to activate."},"Final Stand Two":{"tu":200,"mp":-3,"dmg":4.0,"target":2,"desc":"4x damage to 2 enemies. User must have no allies to activate."},"Furious Strike Two":{"tu":250,"mp":-2,"dmg":3.0,"target":2,"desc":"3x damage to 2 enemies. User must have Fury to activate."},"Power Attack Two":{"tu":300,"mp":-3,"dmg":1.75,"target":2,"desc":"1.75x damage to 2 enemies."},"Reckless Attack Two":{"tu":180,"mp":3,"dmg":1.0,"target":2,"desc":"1x damage to 2 enemies, user suffers recoil damage."},"Reckless Power Attack Two":{"tu":280,"mp":-2,"dmg":2.0,"target":2,"desc":"2x damage to 2 enemies, user suffers recoil damage."},"Survivor's Burst Two":{"tu":300,"mp":-3,"dmg":4.0,"target":2,"desc":"4x damage to 2 enemies. User must survive for 300TU to activate."},"Vengeance Strike Two":{"tu":230,"mp":-2,"dmg":2.5,"target":2,"desc":"Attacks 2 enemies. 2.5x damage to enemies that have killed."},"Zealous Strike Two":{"tu":230,"mp":-2,"dmg":1.75,"target":2,"desc":"1.75x damage to 2 enemies. User must have above 75% HP to activate."},"Time Strike Two":{"tu":300,"mp":-2,"dmg":2.5,"target":2,"desc":"At least 1x damage to 2 enemies. This damage is relative to each target's current TU, up to 4x."},"Attack All (A)":{"tu":250,"mp":5,"dmg":0.5,"target":4,"desc":"0.5x damage to all enemies."},"Attack All (B)":{"tu":230,"mp":4,"dmg":0.5,"target":4,"desc":"0.5x damage to all enemies."},"Desperate Strike All":{"tu":350,"mp":-3,"dmg":2.5,"target":4,"desc":"2.5x damage to all enemies. User must have below 50% HP to activate."},"Power Attack All (A)":{"tu":350,"mp":-4,"dmg":1.25,"target":4,"desc":"1.25x damage to all enemies."},"Power Attack All (B)":{"tu":330,"mp":-3,"dmg":1.0,"target":4,"desc":"1x damage to all enemies."},"Power Attack All (C)":{"tu":380,"mp":-3,"dmg":1.5,"target":4,"desc":"1.5x damage to all enemies"},"Reckless Attack All":{"tu":230,"mp":4,"dmg":0.75,"target":4,"desc":"0.75x damage to all enemies, user suffers recoil damage."},"Reckless Power Attack All":{"tu":330,"mp":-3,"dmg":1.5,"target":4,"desc":"1.5x damage to all enemies, user suffers recoil damage."},"Earth Curse":{"tu":150,"mp":-2,"dmg":0.0,"target":null,"desc":"Curse all Earth element enemies."},"Survivor's Burst All":{"tu":200,"mp":-3,"dmg":2.5,"target":4,"desc":"2.5x damage to all enemies."},"Vengeance Strike All":{"tu":280,"mp":-3,"dmg":1.75,"target":4,"desc":"1.75x damage to all enemies."}},"passive":{"Stun Entry High":{"desc":"Stuns the enemy with the highest current TU for 300TU upon entering battle from reinforcements."},"Stun Entry Low":{"desc":"Stuns the enemy with the lowest current TU for 300TU upon entering battle from reinforcements."},"Endurance":{"desc":"The first time this unit would receive lethal damage while above 1HP it instead survives with 1 HP."},"Sleep Entry High":{"desc":"Sleeps the enemy with the Highest current TU upon entering battle from reinforcements."},"Stun Entry Random":{"desc":"Stuns a random enemy for 300TU upon entering battle from reinforcements."},"Sleep Entry Low":{"desc":"Sleeps the enemy with the lowest current TU upon entering battle from reinforcements."},"Auto Fury":{"desc":"This unit gains Fury upon entering battle."},"Auto MP+2":{"desc":"This unit gains 2MP upon entering battle."},"Sleep Entry Random":{"desc":"Sleeps a random enemy upon entering battle from reinforcements."},"Slow Entry Random":{"desc":"Slows a random enemy upon entering battle from reinforcements."},"Auto Charge Up":{"desc":"This unit Charges upon entering battle."},"Poison Revenge":{"desc":"Poisons an enemy that kills this unit with an attack."},"Stun Revenge++":{"desc":"Stuns an enemy that kills this unit with an attack for 300TU."},"Sleep Revenge++":{"desc":"100% chance to Sleep a unit that kills this unit with an attack."},"Slow Revenge":{"desc":"Slows an enemy that kills this unit with an attack."},"Curse Revenge":{"desc":"Curses an enemy that kills this unit with an attack."},"Poison Entry":{"desc":"Poisons a random enemy upon entering battle from reinforcements."},"Auto Curse":{"desc":"Curses a random enemy upon entering battle."},"Auto P ATK Boost":{"desc":"Increases own P ATK upon entering battle."},"Auto S ATK Boost":{"desc":"Increases own S ATK upon entering battle."},"Auto Full DEF Boost":{"desc":"Increases own S DEF and P DEF upon entering battle."}}};
@@ -350,6 +375,13 @@ function buildControls(){
 
   const ob=document.getElementById('ownToggle');
   ob.onclick=()=>{ state.ownedOnly=!state.ownedOnly; ob.classList.toggle('on',state.ownedOnly); document.getElementById('ownlbl').textContent=state.ownedOnly?'On':'Off'; render(); };
+
+  const cbtn=document.getElementById('clearOwn');
+  const cov=document.getElementById('confirmOverlay');
+  cbtn.onclick=()=>{ if(!OWNED.size) return; document.getElementById('confirmMsg').textContent='Clear all '+OWNED.size+' owned marks?'; cov.classList.add('open'); };
+  document.getElementById('confirmOk').onclick=()=>{ OWNED.clear(); saveOwned(); updateOwnedCount(); render(); cov.classList.remove('open'); };
+  document.getElementById('confirmCancel').onclick=()=>cov.classList.remove('open');
+  cov.onclick=e=>{ if(e.target===cov) cov.classList.remove('open'); };
 
   document.getElementById('colorSeg').innerHTML=
     `<button data-v="ALL" class="on">All</button>`+colors.map(c=>`<button data-v="${c}">${c}</button>`).join('');
@@ -403,7 +435,7 @@ const SWORD='<svg viewBox="0 0 24 24" fill="currentColor"><g transform="rotate(4
 function pictos(c){
   const acts=c.actives||[];
   const guard=acts.some(a=>/Guard/.test(a));
-  const strong=acts.filter(a=>AP[a]&&AP[a].target===2&&AP[a].dmg>=3).length>=2;
+  const strong=acts.filter(a=>AP[a]&&AP[a].target===2&&AP[a].dmg>=3&&a.indexOf('Final Stand')<0).length>=2;
   if(!guard&&!strong) return '';
   return `<div class="picto">${guard?`<span class="pic shield" title="Has Guard">${SHIELD}</span>`:''}${strong?`<span class="pic sword" title="Two strong skills (2-target, 3x+)">${SWORD}</span>`:''}</div>`;
 }
@@ -506,7 +538,7 @@ function openCard(id){
      </div>
 
      ${uq.name?`<div class="sec">
-       <h4>Unique skill <span class="cnt">UNIQUE</span></h4>
+       <h4>Unique skill</h4>
        <div class="skill uniq"><div class="sk-top"><div class="sk-name">${uq.name}</div></div>
          ${uq.desc?`<div class="sk-desc">${uq.desc}</div>`:''}</div>
      </div>`:''}
